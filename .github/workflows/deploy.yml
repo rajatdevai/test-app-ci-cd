@@ -61,6 +61,7 @@ on:
       - 'src/**'                
       - 'pom.xml'               
       - 'settings.xml'          
+      - '.github/workflows/deploy.yml'          
 
   # TRIGGER 3: SCHEDULED (10 PM DAILY)
   schedule:
@@ -261,20 +262,20 @@ jobs:
       - name: Deployment Success
         if: success()
         run: |
-          echo "✅ ✅ Successfully deployed to ${{ env.DEPLOY_ENV }}"
-          echo "📱  App Name: ${{ steps.app-name.outputs.name }}"
-          echo "🌍  Region: ${{ env.DEPLOY_TARGET }}"
-          echo "📊  Replicas: ${{ env.DEPLOY_REPLICAS }}"
-          echo "💾  vCores: ${{ env.DEPLOY_VCORES }}"
-          echo "☕  Java: ${{ env.DEPLOY_JAVA }}"
-          echo "🚀  Runtime: ${{ env.DEPLOY_RUNTIME }}"
+          echo " Successfully deployed to ${{ env.DEPLOY_ENV }}"
+          echo "  App Name: ${{ steps.app-name.outputs.name }}"
+          echo "  Region: ${{ env.DEPLOY_TARGET }}"
+          echo "  Replicas: ${{ env.DEPLOY_REPLICAS }}"
+          echo "  vCores: ${{ env.DEPLOY_VCORES }}"
+          echo "  Java: ${{ env.DEPLOY_JAVA }}"
+          echo "  Runtime: ${{ env.DEPLOY_RUNTIME }}"
 
       - name: Deployment Failure
         if: failure()
         run: |
-          echo "❌ Deployment failed!"
-          echo "🔍  Please check logs above for details"
-          echo "📋  Next steps:"
+          echo " Deployment failed!"
+          echo "  Please check logs above for details"
+          echo "  Next steps:"
           echo "   1. Check CloudHub 2.0 logs in Anypoint Platform"
           echo "   2. Verify application has sufficient resources (vCores/Replicas)"
           echo "   3. Check for startup errors in the application logs"
