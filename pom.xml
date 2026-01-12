@@ -106,6 +106,7 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
+	<!--for exchange -->
 
     <distributionManagement>
         <repository>

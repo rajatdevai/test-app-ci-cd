@@ -51,14 +51,17 @@ on:
         required: true
         type: string
 
+  # TRIGGER 2: AUTOMATIC ON CODE PUSH (works with both main and master)
   push:
     branches:
-      - main                   
+      - main
+      - master
     paths:
       - 'src/**'                
       - 'pom.xml'               
       - 'settings.xml'          
 
+  # TRIGGER 3: SCHEDULED (10 PM DAILY)
   schedule:
     - cron: '0 22 * * *'
 
@@ -238,4 +241,4 @@ jobs:
         if: failure()
         run: |
           echo "❌ Deployment failed!"
-          echo "🔍  Please check logs above details"
+          echo "🔍  Please check logs above for details"
