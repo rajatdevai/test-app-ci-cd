@@ -9,7 +9,7 @@ on:
         required: true
         type: choice
         options:
-          - Sandbox
+          - DEV
           - Production
       target:
         description: CloudHub 2.0 Target/Space
@@ -51,7 +51,6 @@ on:
         required: true
         type: string
 
-  # TRIGGER 2: AUTOMATIC ON CODE PUSH
   push:
     branches:
       - main                   
@@ -60,18 +59,17 @@ on:
       - 'pom.xml'               
       - 'settings.xml'          
 
-  # TRIGGER 3: SCHEDULED (10 PM DAILY)
   schedule:
-    - cron: '0 22 * * *'        # 10 PM UTC every day
+    - cron: '0 22 * * *'
 
 run-name: |
   ${{ github.event_name == 'workflow_dispatch' && format('Manual Deploy - {0} - {1}', inputs.environment, inputs.target) ||
-      github.event_name == 'push' && 'Auto Deploy (Push) - Sandbox' ||
-      github.event_name == 'schedule' && 'Scheduled Deploy - Sandbox' }}
+      github.event_name == 'push' && 'Auto Deploy (Push) - DEV' ||
+      github.event_name == 'schedule' && 'Scheduled Deploy - DEV' }}
 
 env:
   MAVEN_CACHE_KEY: maven-cache
-  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'Sandbox' }}
+  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'DEV' }}
   DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'Cloudhub-US-East-2' }}
   DEPLOY_REPLICAS: ${{ github.event_name == 'workflow_dispatch' && inputs.replicas || '1' }}
   DEPLOY_VCORES: ${{ github.event_name == 'workflow_dispatch' && inputs.vcores || '0.1' }}
@@ -198,7 +196,7 @@ jobs:
           if [ "${{ env.DEPLOY_ENV }}" == "Production" ]; then
             APP_NAME="test-ci-cd-app-production"
           else
-            APP_NAME="test-ci-cd-app-sandbox"
+            APP_NAME="test-ci-cd-app-dev"
           fi
           
           echo "name=$APP_NAME" >> $GITHUB_OUTPUT
