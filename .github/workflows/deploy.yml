@@ -9,7 +9,7 @@ on:
         required: true
         type: choice
         options:
-          - DEV
+          - Sandbox
           - Production
       target:
         description: CloudHub 2.0 Target/Space
@@ -29,7 +29,7 @@ on:
         required: true
         type: choice
         options:
-          - '0.5'
+          - '0.1'
           - '1'
           - '2'
           - '4'
@@ -68,12 +68,12 @@ on:
 
 run-name: |
   ${{ github.event_name == 'workflow_dispatch' && format('Manual Deploy - {0} - {1}', inputs.environment, inputs.target) ||
-      github.event_name == 'push' && 'Auto Deploy (Push) - DEV' ||
-      github.event_name == 'schedule' && 'Scheduled Deploy - DEV' }}
+      github.event_name == 'push' && 'Auto Deploy (Push) - Sandbox' ||
+      github.event_name == 'schedule' && 'Scheduled Deploy - Sandbox' }}
 
 env:
   MAVEN_CACHE_KEY: maven-cache
-  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'DEV' }}
+  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'Sandbox' }}
   DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'Cloudhub-US-East-2' }}
   DEPLOY_REPLICAS: ${{ github.event_name == 'workflow_dispatch' && inputs.replicas || '2' }}
   DEPLOY_VCORES: ${{ github.event_name == 'workflow_dispatch' && inputs.vcores || '1' }}
@@ -218,7 +218,7 @@ jobs:
           if [ "${{ env.DEPLOY_ENV }}" == "Production" ]; then
             APP_NAME="test-ci-cd-app-production"
           else
-            APP_NAME="test-ci-cd-app-dev"
+            APP_NAME="test-ci-cd-app-sandbox"
           fi
           
           echo "name=$APP_NAME" >> $GITHUB_OUTPUT
