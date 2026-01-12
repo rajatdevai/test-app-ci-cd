@@ -238,4 +238,4 @@ jobs:
         if: failure()
         run: |
           echo "❌ Deployment failed!"
-          echo "🔍  Please check logs above for details"
+          echo "🔍  Please check logs above details"
