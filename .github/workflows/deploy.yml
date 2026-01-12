@@ -23,15 +23,16 @@ on:
         options:
           - '1'
           - '2'
+          - '3'
       vcores:
         description: vCores per Replica
         required: true
         type: choice
         options:
-          - '0.1'
-          - '0.2'
+          - '0.5'
           - '1'
           - '2'
+          - '4'
       java:
         description: Java Version
         required: true
@@ -74,10 +75,11 @@ env:
   MAVEN_CACHE_KEY: maven-cache
   DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'DEV' }}
   DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'Cloudhub-US-East-2' }}
-  DEPLOY_REPLICAS: ${{ github.event_name == 'workflow_dispatch' && inputs.replicas || '1' }}
-  DEPLOY_VCORES: ${{ github.event_name == 'workflow_dispatch' && inputs.vcores || '0.1' }}
+  DEPLOY_REPLICAS: ${{ github.event_name == 'workflow_dispatch' && inputs.replicas || '2' }}
+  DEPLOY_VCORES: ${{ github.event_name == 'workflow_dispatch' && inputs.vcores || '1' }}
   DEPLOY_JAVA: ${{ github.event_name == 'workflow_dispatch' && inputs.java || '17' }}
   DEPLOY_RUNTIME: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime || '4.9.8' }}
+  DEPLOY_TIMEOUT: '900'
 
 jobs:
   validate:
@@ -95,8 +97,25 @@ jobs:
           echo "  vCores: ${{ env.DEPLOY_VCORES }}"
           echo "  Java: ${{ env.DEPLOY_JAVA }}"
           echo "  Runtime: ${{ env.DEPLOY_RUNTIME }}"
+          echo "  Deployment Timeout: ${{ env.DEPLOY_TIMEOUT }}s"
           echo "  Branch: ${{ github.ref }}"
           echo "  Commit: ${{ github.sha }}"
+          echo "╚════════════════════════════════════════╝"
+
+      - name: Validate Resource Configuration
+        run: |
+          VCORES=${{ env.DEPLOY_VCORES }}
+          REPLICAS=${{ env.DEPLOY_REPLICAS }}
+          
+          if (( $(echo "$VCORES < 0.5" | bc -l) )); then
+            echo "⚠️  WARNING: vCores should be at least 0.5 for stable deployments"
+          fi
+          
+          if [ "$REPLICAS" -lt 2 ] && [ "${{ env.DEPLOY_ENV }}" = "Production" ]; then
+            echo "⚠️  WARNING: Production deployments should have at least 2 replicas"
+          fi
+          
+          echo "✅ Configuration validation complete"
 
   build:
     needs: validate
@@ -215,6 +234,8 @@ jobs:
           echo "Environment: ${{ env.DEPLOY_ENV }}"
           echo "Target: ${{ env.DEPLOY_TARGET }}"
           echo "Replicas: ${{ env.DEPLOY_REPLICAS }}"
+          echo "vCores: ${{ env.DEPLOY_VCORES }}"
+          echo "Deployment Timeout: ${{ env.DEPLOY_TIMEOUT }}s"
           
           mvn clean deploy -DmuleDeploy \
             -DClientId="$CLIENT_ID" \
@@ -227,7 +248,14 @@ jobs:
             -DvCores="${{ env.DEPLOY_VCORES }}" \
             -Dregion="${{ env.DEPLOY_TARGET }}" \
             -Druntime="${{ env.DEPLOY_RUNTIME }}" \
+            -DdeploymentTimeout="${{ env.DEPLOY_TIMEOUT }}" \
             -DskipTests
+
+      - name: Wait for Application Stability
+        run: |
+          echo "⏳ Waiting for application to stabilize (30 seconds)..."
+          sleep 30
+          echo "✅ Stability check complete"
 
       - name: Deployment Success
         if: success()
@@ -236,9 +264,17 @@ jobs:
           echo "📱  App Name: ${{ steps.app-name.outputs.name }}"
           echo "🌍  Region: ${{ env.DEPLOY_TARGET }}"
           echo "📊  Replicas: ${{ env.DEPLOY_REPLICAS }}"
+          echo "💾  vCores: ${{ env.DEPLOY_VCORES }}"
+          echo "☕  Java: ${{ env.DEPLOY_JAVA }}"
+          echo "🚀  Runtime: ${{ env.DEPLOY_RUNTIME }}"
 
       - name: Deployment Failure
         if: failure()
         run: |
           echo "❌ Deployment failed!"
           echo "🔍  Please check logs above for details"
+          echo "📋  Next steps:"
+          echo "   1. Check CloudHub 2.0 logs in Anypoint Platform"
+          echo "   2. Verify application has sufficient resources (vCores/Replicas)"
+          echo "   3. Check for startup errors in the application logs"
+          echo "   4. Verify all environment variables and secrets are correct"
