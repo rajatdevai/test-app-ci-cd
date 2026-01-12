@@ -20,45 +20,31 @@
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>3.2.0</version>
-				<extensions>true</extensions>
-			</plugin>
-			<plugin>
-				<groupId>org.mule.tools.maven</groupId>
-				<artifactId>mule-maven-plugin</artifactId>
-				<version>${mule.maven.plugin.version}</version>
-				<extensions>true</extensions>
-			</plugin>
-			 <!-- CloudHub 2.0 Deployment -->
-            <plugin>
-                <groupId>org.mule.tools.maven</groupId>
-                <artifactId>mule-maven-plugin</artifactId>
-                <version>${mule.maven.plugin.version}</version>
-                <extensions>true</extensions>
+  <groupId>org.mule.tools.maven</groupId>
+  <artifactId>mule-maven-plugin</artifactId>
+  <version>${mule.maven.plugin.version}</version>
+  <extensions>true</extensions>
 
-                <configuration>
-                    <cloudhub2Deployment>
-                        <uri>https://anypoint.mulesoft.com</uri>
-                        <provider>MC</provider>
+  <configuration>
+    <cloudhub2Deployment>
+      <uri>https://anypoint.mulesoft.com</uri>
+      <provider>MC</provider>
 
-                        <!-- Overridden by workflow -->
-                        <environment>${environment}</environment>
-                        <target>${region}</target>
-                        <muleVersion>${runtime}</muleVersion>
+      <environment>${environment}</environment>
+      <target>${region}</target>
+      <muleVersion>${runtime}</muleVersion>
 
-                        <applicationName>${application.name}</applicationName>
-                        <replicas>${replicas}</replicas>
-                        <vCores>${vCores}</vCores>
+      <applicationName>${application.name}</applicationName>
+      <replicas>${replicas}</replicas>
+      <vCores>${vCores}</vCores>
 
-                        <!-- Connected App authentication -->
-                        <connectedAppClientId>${ClientId}</connectedAppClientId>
-                        <connectedAppClientSecret>${ClientSecret}</connectedAppClientSecret>
-                        <connectedAppGrantType>${GrantType}</connectedAppGrantType>
-                    </cloudhub2Deployment>
-                </configuration>
-            </plugin>
+      <!-- Connected App auth -->
+      <connectedAppClientId>${ClientId}</connectedAppClientId>
+      <connectedAppClientSecret>${ClientSecret}</connectedAppClientSecret>
+    </cloudhub2Deployment>
+  </configuration>
+</plugin>
+
 		</plugins>
 	</build>
 

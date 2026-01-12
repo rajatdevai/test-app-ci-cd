@@ -7,9 +7,7 @@ on:
         description: Deployment Environment
         required: true
         type: choice
-        options:
-          - Sandbox
-          - Production
+        options: [Sandbox, Production]
       target:
         description: CloudHub 2.0 Region
         required: true
@@ -42,14 +40,6 @@ on:
       - pom.xml
       - settings.xml
 
-  schedule:
-    - cron: '0 22 * * *'
-
-run-name: |
-  ${{ github.event_name == 'workflow_dispatch' && format('Manual Deploy - {0}', inputs.environment) ||
-      github.event_name == 'push' && 'Auto Deploy - Sandbox' ||
-      'Scheduled Deploy - Sandbox' }}
-
 env:
   DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'Sandbox' }}
   DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'Cloudhub-US-East-2' }}
@@ -59,59 +49,11 @@ env:
   DEPLOY_RUNTIME: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime || '4.9.8' }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ env.DEPLOY_JAVA }}
-
-      - name: Build Mule Application
-        run: |
-          mvn clean package -DskipTests
-          ls -lh target/*.jar
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ env.DEPLOY_JAVA }}
-
-      - name: Publish to Anypoint Exchange
-        env:
-          CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
-          CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
-        run: |
-          mvn deploy -s settings.xml -DskipTests
-
   deploy:
-    needs: publish
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
 
       - uses: actions/setup-java@v4
         with:
@@ -132,7 +74,8 @@ jobs:
           CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
           CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
         run: |
-          mvn package mule:deploy \
+          mvn clean package mule:deploy \
+            -s settings.xml \
             -DClientId="$CLIENT_ID" \
             -DClientSecret="$CLIENT_SECRET" \
             -Denvironment="${{ env.DEPLOY_ENV }}" \
