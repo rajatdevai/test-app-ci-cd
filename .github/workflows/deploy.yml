@@ -1,46 +1,76 @@
-name: Deploy to CloudHub 2.0 (Manual + Auto)
+name: Deploy to CloudHub 2.0 (Manual + Automatic)
 
 on:
+  # TRIGGER 1: MANUAL 
   workflow_dispatch:
     inputs:
       environment:
         description: Deployment Environment
         required: true
         type: choice
-        options: [Sandbox, Production]
+        options:
+          - Sandbox
+          - Production
       target:
-        description: CloudHub 2.0 Region
+        description: CloudHub 2.0 Target/Space
         required: true
+        type: string
         default: Cloudhub-US-East-2
       replicas:
         description: Number of Replicas
         required: true
         type: choice
-        options: ['1', '2']
+        options:
+          - '1'
+          - '2'
       vcores:
         description: vCores per Replica
         required: true
         type: choice
-        options: ['0.1', '0.2', '1']
+        options:
+          - '0.1'
+          - '0.2'
+          - '1'
+          - '2'
       java:
         description: Java Version
         required: true
         type: choice
-        options: ['17']
+        options:
+          - '8'
+          - '17'
       runtime:
         description: Mule Runtime Version
         required: true
         type: choice
-        options: ['4.9.8']
+        options:
+          - '4.9.8'
+          - '4.10.0'
+      commit:
+        description: Deployment Description
+        required: true
+        type: string
 
+  # TRIGGER 2: AUTOMATIC ON CODE PUSH
   push:
-    branches: [ main ]
+    branches:
+      - main                   
     paths:
-      - src/**
-      - pom.xml
-      - settings.xml
+      - 'src/**'                
+      - 'pom.xml'               
+      - 'settings.xml'          
+
+  # TRIGGER 3: SCHEDULED (10 PM DAILY)
+  schedule:
+    - cron: '0 22 * * *'        # 10 PM UTC every day
+
+run-name: |
+  ${{ github.event_name == 'workflow_dispatch' && format('Manual Deploy - {0} - {1}', inputs.environment, inputs.target) ||
+      github.event_name == 'push' && 'Auto Deploy (Push) - Sandbox' ||
+      github.event_name == 'schedule' && 'Scheduled Deploy - Sandbox' }}
 
 env:
+  MAVEN_CACHE_KEY: maven-cache
   DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'Sandbox' }}
   DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'Cloudhub-US-East-2' }}
   DEPLOY_REPLICAS: ${{ github.event_name == 'workflow_dispatch' && inputs.replicas || '1' }}
@@ -49,40 +79,165 @@ env:
   DEPLOY_RUNTIME: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime || '4.9.8' }}
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Validate Deployment Config
+        run: |
+          echo "╔════════════════════════════════════════╗"
+          echo "║    DEPLOYMENT CONFIGURATION            ║"
+          echo "╠════════════════════════════════════════╣"
+          echo "  Trigger Type: ${{ github.event_name }}"
+          echo "  Environment: ${{ env.DEPLOY_ENV }}"
+          echo "  Target: ${{ env.DEPLOY_TARGET }}"
+          echo "  Replicas: ${{ env.DEPLOY_REPLICAS }}"
+          echo "  vCores: ${{ env.DEPLOY_VCORES }}"
+          echo "  Java: ${{ env.DEPLOY_JAVA }}"
+          echo "  Runtime: ${{ env.DEPLOY_RUNTIME }}"
+          echo "  Branch: ${{ github.ref }}"
+          echo "  Commit: ${{ github.sha }}"
 
-      - uses: actions/setup-java@v4
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.DEPLOY_JAVA }}
 
-      - name: Resolve App Name
-        id: app
+      - name: Build Application
         run: |
-          if [ "${{ env.DEPLOY_ENV }}" = "Production" ]; then
-            echo "name=test-ci-cd-app-prod" >> $GITHUB_OUTPUT
+          echo "🔨 Building Mule Application..."
+          mvn clean package -DskipTests
+          echo "✅ Build Complete"
+          ls -lh target/*.jar
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mule-app-build
+          path: target/*.jar
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.DEPLOY_JAVA }}
+
+      - name: Verify Settings.xml
+        run: |
+          if [ -f "settings.xml" ]; then
+            echo "✅ settings.xml found"
           else
-            echo "name=test-ci-cd-app-sandbox" >> $GITHUB_OUTPUT
+            echo "❌ settings.xml not found"
+            exit 1
           fi
+
+      - name: Publish to Anypoint Exchange
+        env:
+          CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
+          CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
+        run: |
+          echo "📦 Publishing to Anypoint Exchange..."
+          mvn deploy -s settings.xml -DskipTests
+          echo "✅ Published to Exchange"
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.DEPLOY_JAVA }}
+
+      - name: Determine App Name
+        id: app-name
+        run: |
+          if [ "${{ env.DEPLOY_ENV }}" == "Production" ]; then
+            APP_NAME="test-ci-cd-app-production"
+          else
+            APP_NAME="test-ci-cd-app-sandbox"
+          fi
+          
+          echo "name=$APP_NAME" >> $GITHUB_OUTPUT
+          echo "Deployment App Name: $APP_NAME"
 
       - name: Deploy to CloudHub 2.0
         env:
           CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
           CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
+          GRANT_TYPE: client_credentials
         run: |
-          mvn clean package mule:deploy \
-            -s settings.xml \
+          echo "🚀 Deploying to CloudHub 2.0..."
+          echo "Environment: ${{ env.DEPLOY_ENV }}"
+          echo "Target: ${{ env.DEPLOY_TARGET }}"
+          echo "Replicas: ${{ env.DEPLOY_REPLICAS }}"
+          
+          mvn clean deploy -DmuleDeploy \
             -DClientId="$CLIENT_ID" \
             -DClientSecret="$CLIENT_SECRET" \
+            -DGrantType="$GRANT_TYPE" \
             -Denvironment="${{ env.DEPLOY_ENV }}" \
-            -Dapplication.name="${{ steps.app.outputs.name }}" \
+            -Dapplication.name="${{ steps.app-name.outputs.name }}" \
             -DjavaVersion="${{ env.DEPLOY_JAVA }}" \
             -Dreplicas="${{ env.DEPLOY_REPLICAS }}" \
             -DvCores="${{ env.DEPLOY_VCORES }}" \
             -Dregion="${{ env.DEPLOY_TARGET }}" \
             -Druntime="${{ env.DEPLOY_RUNTIME }}" \
             -DskipTests
+
+      - name: Deployment Success
+        if: success()
+        run: |
+          echo "✅ ✅ Successfully deployed to ${{ env.DEPLOY_ENV }}"
+          echo "📱  App Name: ${{ steps.app-name.outputs.name }}"
+          echo "🌍  Region: ${{ env.DEPLOY_TARGET }}"
+          echo "📊  Replicas: ${{ env.DEPLOY_REPLICAS }}"
+
+      - name: Deployment Failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "🔍  Please check logs above for details"

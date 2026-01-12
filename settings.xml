@@ -1,23 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-          https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+  https://maven.apache.org/xsd/settings-1.0.0.xsd">
 
   <servers>
 
-    <!-- Anypoint Exchange -->
     <server>
       <id>anypoint-exchange-v3</id>
-      <username>${env.CLIENT_ID}</username>
-      <password>${env.CLIENT_SECRET}</password>
-    </server>
-
-    <!-- Runtime Manager / CloudHub 2.0 -->
-    <server>
-      <id>anypoint-platform</id>
-      <username>${env.CLIENT_ID}</username>
-      <password>${env.CLIENT_SECRET}</password>
+      <username>~~~Client~~~</username>
+      <password>9ba4822fdbf74a12ae789977c7020bbb~?~D73a3317B7aa43eabF440DBbf458E930</password>
     </server>
 
   </servers>
