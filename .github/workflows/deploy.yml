@@ -238,7 +238,7 @@ jobs:
           echo "Deployment Timeout: ${{ env.DEPLOY_TIMEOUT }}s"
           
           mvn clean deploy -DmuleDeploy \
-          -e -X \ 
+          -e -X \
             -DClientId="$CLIENT_ID" \
             -DClientSecret="$CLIENT_SECRET" \
             -DGrantType="$GRANT_TYPE" \
