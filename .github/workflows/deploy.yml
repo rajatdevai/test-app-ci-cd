@@ -224,7 +224,7 @@ jobs:
           echo "name=$APP_NAME" >> $GITHUB_OUTPUT
           echo "Deployment App Name: $APP_NAME"
 
-            - name: Deploy to CloudHub 2.0
+      - name: Deploy to CloudHub 2.0
         env:
           CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
           CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
@@ -238,7 +238,7 @@ jobs:
           echo "Deployment Timeout: ${{ env.DEPLOY_TIMEOUT }}s"
           
           mvn clean deploy -DmuleDeploy \
-            -e -X \
+          -e -X \ 
             -DClientId="$CLIENT_ID" \
             -DClientSecret="$CLIENT_SECRET" \
             -DGrantType="$GRANT_TYPE" \
@@ -251,7 +251,6 @@ jobs:
             -Druntime="${{ env.DEPLOY_RUNTIME }}" \
             -DdeploymentTimeout="${{ env.DEPLOY_TIMEOUT }}" \
             -DskipTests
-
 
       - name: Wait for Application Stability
         run: |
